@@ -4,34 +4,78 @@ var webpack = require('webpack');
 var nodeExternals = require('webpack-node-externals');
 var merge = require('webpack-merge');
 var allFilenamesExceptJavaScript = /\.(?!js(\?|$))([^.]+(\?|$))/;
+var utils = require('./build/utils');
+var projectRoot = path.resolve(__dirname, '../');
 
 // Configuration in common to both client-side and server-side bundles
 var sharedConfig = {
-    resolve: { extensions: [ '', '.js', '.ts' ] },
+    resolve: {
+        extensions: ['', '.js', '.ts', '.vue'],
+        alias: {
+            'src': path.resolve(__dirname, '../ClientApp'),
+            'assets': path.resolve(__dirname, '../ClientApp/assets'),
+            'components': path.resolve(__dirname, '../ClientApp/components'),
+            vue: 'vue/dist/vue.js'
+        }
+    },
     output: {
         filename: '[name].js',
         publicPath: '/dist/' // Webpack dev middleware, if enabled, handles requests for this URL prefix
     },
     module: {
         loaders: [
-            { test: /\.ts$/, include: /ClientApp/, loader: 'ts', query: { silent: true } },
-            { test: /\.html$/, loader: 'raw' },
-            { test: /\.css$/, loader: 'to-string!css' },
-            { test: /\.(png|jpg|jpeg|gif|svg)$/, loader: 'url', query: { limit: 25000 } }
+          {
+              test: /\.vue$/,
+              loader: 'vue'
+          },
+          {
+              test: /\.js$/,
+              loader: 'babel',
+              include: projectRoot,
+              exclude: /node_modules/
+          },
+          {
+              test: /\.json$/,
+              loader: 'json'
+          },
+          {
+              test: /\.html$/,
+              loader: 'vue-html'
+          },
+          {
+              test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
+              loader: 'url',
+              query: {
+                  limit: 10000,
+                  name: utils.assetsPath('img/[name].[hash:7].[ext]')
+              }
+          },
+          {
+              test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
+              loader: 'url',
+              query: {
+                  limit: 10000,
+                  name: utils.assetsPath('fonts/[name].[hash:7].[ext]')
+              }
+          }
         ]
     }
 };
 
 // Configuration for client-side bundle suitable for running in browsers
 var clientBundleConfig = merge(sharedConfig, {
-    entry: { 'main-client': './ClientApp/boot-client.ts' },
+    //entry: { 'main-client': './build/dev-client.js' },
+    entry: {
+        // The loader will follow all chains of reference from this entry point...
+        main: ['./ClientApp/main.js']
+    },
     output: { path: path.join(__dirname, './wwwroot/dist') },
     devtool: isDevBuild ? 'inline-source-map' : null,
     plugins: [
-        new webpack.DllReferencePlugin({
-            context: __dirname,
-            manifest: require('./wwwroot/dist/vendor-manifest.json')
-        })
+        //new webpack.DllReferencePlugin({
+        //    context: __dirname,
+        //    manifest: require('./wwwroot/dist/vendor-manifest.json')
+        //})
     ].concat(isDevBuild ? [] : [
         // Plugins that apply in production builds only
         new webpack.optimize.OccurenceOrderPlugin(),
@@ -41,7 +85,11 @@ var clientBundleConfig = merge(sharedConfig, {
 
 // Configuration for server-side (prerendering) bundle suitable for running in Node
 var serverBundleConfig = merge(sharedConfig, {
-    entry: { 'main-server': './ClientApp/boot-server.ts' },
+    //entry: { 'main-server': './build/dev-server.js' },
+    entry: {
+        // The loader will follow all chains of reference from this entry point...
+        main: ['./ClientApp/main.js']
+    },
     output: {
         libraryTarget: 'commonjs',
         path: path.join(__dirname, './ClientApp/dist')
