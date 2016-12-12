@@ -42,7 +42,8 @@ namespace VueNetCore
             {
                 app.UseDeveloperExceptionPage();
                 app.UseWebpackDevMiddleware(new WebpackDevMiddlewareOptions {
-                    HotModuleReplacement = true
+                    HotModuleReplacement = true,
+                    ConfigFile = "build/webpack.dev.conf.js"
                 });
             }
             else
